@@ -15,31 +15,25 @@ const ctx = canvas.getContext("2d")!;
 canvas.width = 256;
 canvas.height = 256;
 
-// Clear Button
-const clearButton = document.createElement("button");
-clearButton.textContent = "Clear";
-document.body.append(clearButton);
-
-clearButton.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-});
-
-// Mouse Drawing
+// Mouse Drawing State
 let isDrawing = false;
-let x = 0;
-let y = 0;
 
+// Array of points
+const drawing: { x: number; y: number }[][] = [];
+
+// Mouse Events
 canvas.addEventListener("mousedown", (e) => {
-  x = e.offsetX;
-  y = e.offsetY;
+  const newStroke = [{ x: e.offsetX, y: e.offsetY }];
+  drawing.push(newStroke);
   isDrawing = true;
+  canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (isDrawing) {
-    drawLine(ctx, x, y, e.offsetX, e.offsetY);
-    x = e.offsetX;
-    y = e.offsetY;
+    const currentStroke = drawing[drawing.length - 1]!;
+    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+    canvas.dispatchEvent(new Event("drawing-changed"));
   }
 });
 
@@ -47,18 +41,31 @@ canvas.addEventListener("mouseup", () => {
   isDrawing = false;
 });
 
-function drawLine(
-  context: CanvasRenderingContext2D,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-) {
-  context.beginPath();
-  context.strokeStyle = "black";
-  context.lineWidth = 1;
-  context.moveTo(x1, y1);
-  context.lineTo(x2, y2);
-  context.stroke();
-  context.closePath();
-}
+// Clear Button
+const clearButton = document.createElement("button");
+clearButton.textContent = "Clear";
+document.body.append(clearButton);
+
+clearButton.addEventListener("click", () => {
+  drawing.length = 0; // clear array
+  canvas.dispatchEvent(new Event("drawing-changed"));
+});
+
+// Observer: Redraw on changes
+canvas.addEventListener("drawing-changed", () => {
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Redraw strokes
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 1;
+
+  for (const stroke of drawing) {
+    ctx.beginPath();
+    ctx.moveTo(stroke[0]!.x, stroke[0]!.y);
+    for (let i = 1; i < stroke.length; i++) {
+      ctx.lineTo(stroke[i]!.x, stroke[i]!.y);
+    }
+    ctx.stroke();
+  }
+});
