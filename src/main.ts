@@ -21,31 +21,31 @@ document.body.append(buttonContainer);
 
 // Mouse Drawing State
 let isDrawing = false;
+let currentLine: MarkerLine | null = null;
 
 // Array of points and redo stacks
-const drawing: { x: number; y: number }[][] = [];
-let redoStack: { x: number; y: number }[][] = [];
+const drawing: MarkerLine[] = [];
+const redoStack: MarkerLine[] = [];
 
 // Mouse Events
 canvas.addEventListener("mousedown", (e) => {
-  const newStroke = [{ x: e.offsetX, y: e.offsetY }];
-  console.log("New Stroke Started");
-  redoStack = []; // Clear redo History
-  drawing.push(newStroke);
+  currentLine = makeMarkerLine(e.offsetX, e.offsetY);
+  redoStack.length = 0;
+  drawing.push(currentLine);
   isDrawing = true;
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (isDrawing) {
-    const currentStroke = drawing[drawing.length - 1]!;
-    currentStroke.push({ x: e.offsetX, y: e.offsetY });
+  if (isDrawing && currentLine) {
+    currentLine.drag(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
 });
 
 canvas.addEventListener("mouseup", () => {
   isDrawing = false;
+  currentLine = null;
 });
 
 // Clear Button
@@ -62,26 +62,16 @@ clearButton.addEventListener("click", () => {
 const undoButton = document.createElement("button");
 undoButton.textContent = "Undo";
 document.body.append(undoButton);
-
 undoButton.addEventListener("click", () => {
-  if (drawing.length > 0) {
-    const undoStroke = drawing.pop()!;
-    redoStack.push(undoStroke);
-    canvas.dispatchEvent(new Event("drawing-changed"));
-  }
+  undoRedoListener(drawing, redoStack);
 });
 
 // Redo button
 const redoButton = document.createElement("button");
 redoButton.textContent = "Redo";
 document.body.append(redoButton);
-
 redoButton.addEventListener("click", () => {
-  if (redoStack.length > 0) {
-    const redoStroke = redoStack.pop()!;
-    drawing.push(redoStroke);
-    canvas.dispatchEvent(new Event("drawing-changed"));
-  }
+  undoRedoListener(redoStack, drawing);
 });
 
 // Observer: Redraw on changes
@@ -92,13 +82,42 @@ canvas.addEventListener("drawing-changed", () => {
   // Redraw strokes
   ctx.strokeStyle = "black";
   ctx.lineWidth = 1;
-
-  for (const stroke of drawing) {
-    ctx.beginPath();
-    ctx.moveTo(stroke[0]!.x, stroke[0]!.y);
-    for (let i = 1; i < stroke.length; i++) {
-      ctx.lineTo(stroke[i]!.x, stroke[i]!.y);
-    }
-    ctx.stroke();
+  for (const cmd of drawing) {
+    cmd.display(ctx);
   }
 });
+
+// Function for undo and redo event Listeners
+function undoRedoListener(
+  source: MarkerLine[],
+  target: MarkerLine[],
+) {
+  if (source.length > 0) {
+    const stroke = source.pop()!;
+    target.push(stroke);
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+}
+
+interface MarkerLine {
+  drag(x: number, y: number): void;
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+function makeMarkerLine(startX: number, startY: number): MarkerLine {
+  const points: { x: number; y: number }[] = [{ x: startX, y: startY }];
+
+  return {
+    drag(x: number, y: number) {
+      points.push({ x, y });
+    },
+    display(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.moveTo(points[0]!.x, points[0]!.y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i]!.x, points[i]!.y);
+      }
+      ctx.stroke();
+    },
+  };
+}
