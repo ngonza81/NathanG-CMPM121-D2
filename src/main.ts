@@ -22,6 +22,7 @@ document.body.append(buttonContainer);
 // Mouse Drawing State
 let isDrawing = false;
 let currentLine: MarkerLine | null = null;
+let curThickness = 1;
 
 // Array of points and redo stacks
 const drawing: MarkerLine[] = [];
@@ -29,7 +30,7 @@ const redoStack: MarkerLine[] = [];
 
 // Mouse Events
 canvas.addEventListener("mousedown", (e) => {
-  currentLine = makeMarkerLine(e.offsetX, e.offsetY);
+  currentLine = makeMarkerLine(e.offsetX, e.offsetY, curThickness);
   redoStack.length = 0;
   drawing.push(currentLine);
   isDrawing = true;
@@ -62,6 +63,7 @@ clearButton.addEventListener("click", () => {
 const undoButton = document.createElement("button");
 undoButton.textContent = "Undo";
 document.body.append(undoButton);
+
 undoButton.addEventListener("click", () => {
   undoRedoListener(drawing, redoStack);
 });
@@ -70,8 +72,27 @@ undoButton.addEventListener("click", () => {
 const redoButton = document.createElement("button");
 redoButton.textContent = "Redo";
 document.body.append(redoButton);
+
 redoButton.addEventListener("click", () => {
   undoRedoListener(redoStack, drawing);
+});
+
+// Thin Button
+const thinButton = document.createElement("button");
+thinButton.textContent = "Thin";
+document.body.append(thinButton);
+
+thinButton.addEventListener("click", () => {
+  curThickness = 1;
+});
+
+// Thick Button
+const thickButton = document.createElement("button");
+thickButton.textContent = "Thick";
+document.body.append(thickButton);
+
+thickButton.addEventListener("click", () => {
+  curThickness = 3;
 });
 
 // Observer: Redraw on changes
@@ -80,8 +101,6 @@ canvas.addEventListener("drawing-changed", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Redraw strokes
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 1;
   for (const cmd of drawing) {
     cmd.display(ctx);
   }
@@ -104,7 +123,11 @@ interface MarkerLine {
   display(ctx: CanvasRenderingContext2D): void;
 }
 
-function makeMarkerLine(startX: number, startY: number): MarkerLine {
+function makeMarkerLine(
+  startX: number,
+  startY: number,
+  thickness: number,
+): MarkerLine {
   const points: { x: number; y: number }[] = [{ x: startX, y: startY }];
 
   return {
@@ -113,6 +136,8 @@ function makeMarkerLine(startX: number, startY: number): MarkerLine {
     },
     display(ctx: CanvasRenderingContext2D) {
       ctx.beginPath();
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = thickness;
       ctx.moveTo(points[0]!.x, points[0]!.y);
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i]!.x, points[i]!.y);
