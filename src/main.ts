@@ -14,6 +14,7 @@ const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 canvas.width = 256;
 canvas.height = 256;
+canvas.style.cursor = "none";
 
 // Button container (So buttons can all be under canvas)
 const buttonContainer = document.createElement("div");
@@ -23,6 +24,7 @@ document.body.append(buttonContainer);
 let isDrawing = false;
 let currentLine: MarkerLine | null = null;
 let curThickness = 1;
+let curCursor: CursorPreview | null = null;
 
 // Array of points and redo stacks
 const drawing: MarkerLine[] = [];
@@ -38,15 +40,23 @@ canvas.addEventListener("mousedown", (e) => {
 });
 
 canvas.addEventListener("mousemove", (e) => {
+  curCursor = makeCursorPreview(e.offsetX, e.offsetY, curThickness);
+
   if (isDrawing && currentLine) {
     currentLine.drag(e.offsetX, e.offsetY);
-    canvas.dispatchEvent(new Event("drawing-changed"));
   }
+
+  canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mouseup", () => {
   isDrawing = false;
   currentLine = null;
+});
+
+canvas.addEventListener("mouseleave", () => {
+  curCursor = null;
+  canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 // Clear Button
@@ -81,9 +91,10 @@ redoButton.addEventListener("click", () => {
 const thinButton = document.createElement("button");
 thinButton.textContent = "Thin";
 document.body.append(thinButton);
+thinButton.classList.add("selectedTool"); // Default selected
 
 thinButton.addEventListener("click", () => {
-  curThickness = 1;
+  selectTool(thinButton, 1);
 });
 
 // Thick Button
@@ -92,7 +103,7 @@ thickButton.textContent = "Thick";
 document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
-  curThickness = 3;
+  selectTool(thickButton, 3);
 });
 
 // Observer: Redraw on changes
@@ -104,7 +115,20 @@ canvas.addEventListener("drawing-changed", () => {
   for (const cmd of drawing) {
     cmd.display(ctx);
   }
+
+  // Draw cursor preview
+  if (curCursor) {
+    curCursor.display(ctx);
+  }
 });
+
+// Function for Thickness button visual feedback
+function selectTool(button: HTMLButtonElement, thickness: number) {
+  curThickness = thickness;
+  thinButton.classList.remove("selectedTool");
+  thickButton.classList.remove("selectedTool");
+  button.classList.add("selectedTool");
+}
 
 // Function for undo and redo event Listeners
 function undoRedoListener(
@@ -142,6 +166,27 @@ function makeMarkerLine(
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i]!.x, points[i]!.y);
       }
+      ctx.stroke();
+    },
+  };
+}
+
+interface CursorPreview {
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+function makeCursorPreview(
+  x: number,
+  y: number,
+  thickness: number,
+): CursorPreview {
+  return {
+    display(ctx) {
+      ctx.beginPath();
+      ctx.strokeStyle = "gray";
+      ctx.lineWidth = 1;
+      ctx.arc(x, y, thickness * 1.3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
     },
   };
