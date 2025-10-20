@@ -24,7 +24,8 @@ document.body.append(buttonContainer);
 let isDrawing = false;
 let currentLine: MarkerLine | null = null;
 let curThickness = 1;
-let curCursor: CursorPreview | null = null;
+let curTool: string = "thin";
+let toolPreview: ToolPreview | null = null;
 
 // Array of points and redo stacks
 const drawing: MarkerLine[] = [];
@@ -32,18 +33,27 @@ const redoStack: MarkerLine[] = [];
 
 // Mouse Events
 canvas.addEventListener("mousedown", (e) => {
-  currentLine = makeMarkerLine(e.offsetX, e.offsetY, curThickness);
+  if (curTool === "thin" || curTool === "thick") {
+    currentLine = makeMarkerLine(e.offsetX, e.offsetY, curThickness);
+    drawing.push(currentLine);
+  } else {
+    const sticker = makeSticker(curTool, e.offsetX, e.offsetY);
+    drawing.push(sticker);
+  }
   redoStack.length = 0;
-  drawing.push(currentLine);
   isDrawing = true;
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  curCursor = makeCursorPreview(e.offsetX, e.offsetY, curThickness);
-
   if (isDrawing && currentLine) {
     currentLine.drag(e.offsetX, e.offsetY);
+  }
+
+  if (curTool === "thin" || curTool === "thick") {
+    toolPreview = makeCursorPreview(e.offsetX, e.offsetY, curThickness);
+  } else {
+    toolPreview = makeStickerPreview(curTool, e.offsetX, e.offsetY);
   }
 
   canvas.dispatchEvent(new Event("drawing-changed"));
@@ -55,7 +65,7 @@ canvas.addEventListener("mouseup", () => {
 });
 
 canvas.addEventListener("mouseleave", () => {
-  curCursor = null;
+  toolPreview = null;
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
@@ -89,22 +99,40 @@ redoButton.addEventListener("click", () => {
 
 // Thin Button
 const thinButton = document.createElement("button");
-thinButton.textContent = "Thin";
+thinButton.textContent = "thin";
 document.body.append(thinButton);
 thinButton.classList.add("selectedTool"); // Default selected
 
 thinButton.addEventListener("click", () => {
+  curTool = "thin";
   selectTool(thinButton, 1);
 });
 
 // Thick Button
 const thickButton = document.createElement("button");
-thickButton.textContent = "Thick";
+thickButton.textContent = "thick";
 document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
+  curTool = "thick";
   selectTool(thickButton, 3);
 });
+
+// Emoji Buttons
+const stickers = ["😀", "⭐", "❤️"];
+const stickerButtons: HTMLButtonElement[] = [];
+
+for (const emoji of stickers) {
+  const btn = document.createElement("button");
+  btn.textContent = emoji;
+  stickerButtons.push(btn);
+  document.body.append(btn);
+  btn.addEventListener("click", () => {
+    curTool = emoji;
+    selectTool(btn, curThickness);
+    canvas.dispatchEvent(new Event("tool-moved"));
+  });
+}
 
 // Observer: Redraw on changes
 canvas.addEventListener("drawing-changed", () => {
@@ -117,16 +145,19 @@ canvas.addEventListener("drawing-changed", () => {
   }
 
   // Draw cursor preview
-  if (curCursor) {
-    curCursor.display(ctx);
+  if (toolPreview) {
+    toolPreview.display(ctx);
   }
 });
 
-// Function for Thickness button visual feedback
+// Function for tool button visual feedback
 function selectTool(button: HTMLButtonElement, thickness: number) {
   curThickness = thickness;
   thinButton.classList.remove("selectedTool");
   thickButton.classList.remove("selectedTool");
+  for (const btn of stickerButtons) {
+    btn.classList.remove("selectedTool");
+  }
   button.classList.add("selectedTool");
 }
 
@@ -171,7 +202,26 @@ function makeMarkerLine(
   };
 }
 
-interface CursorPreview {
+interface StickerCommand {
+  drag(x: number, y: number): void;
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+function makeSticker(emoji: string, x: number, y: number): StickerCommand {
+  let pos = { x, y };
+
+  return {
+    drag(x: number, y: number) {
+      pos = { x, y };
+    },
+    display(ctx) {
+      ctx.font = "32px serif";
+      ctx.fillText(emoji, pos.x - 16, pos.y + 16);
+    },
+  };
+}
+
+interface ToolPreview {
   display(ctx: CanvasRenderingContext2D): void;
 }
 
@@ -179,7 +229,7 @@ function makeCursorPreview(
   x: number,
   y: number,
   thickness: number,
-): CursorPreview {
+): ToolPreview {
   return {
     display(ctx) {
       ctx.beginPath();
@@ -188,6 +238,17 @@ function makeCursorPreview(
       ctx.arc(x, y, thickness * 1.3, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+    },
+  };
+}
+
+function makeStickerPreview(emoji: string, x: number, y: number): ToolPreview {
+  return {
+    display(ctx) {
+      ctx.globalAlpha = 0.5;
+      ctx.font = "32px serif";
+      ctx.fillText(emoji, x - 16, y + 16);
+      ctx.globalAlpha = 1.0;
     },
   };
 }
