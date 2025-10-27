@@ -165,7 +165,36 @@ function makeStickerButton() {
   });
 }
 
-//  Initial sticker buttons
+// Export Button
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export as PNG";
+exportButton.classList.add("exportbtn");
+document.body.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  // Creating igh-res canvas
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d")!;
+  exportCtx.fillStyle = "white";
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+  exportCtx.scale(4, 4);
+
+  // Redraw everything from display list
+  for (const cmd of drawing) {
+    cmd.display(exportCtx);
+  }
+
+  // Convert to PNG
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sticker_sketchpad.png";
+  anchor.click();
+});
+
+// Initial sticker buttons
 makeStickerButton();
 
 // Observer: Redraw on changes
