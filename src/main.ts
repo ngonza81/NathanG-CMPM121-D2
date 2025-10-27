@@ -25,6 +25,7 @@ let isDrawing = false;
 let currentLine: MarkerLine | null = null;
 let curThickness = 2.5;
 let curTool: string = "thin";
+let curColor = "black";
 let toolPreview: ToolPreview | null = null;
 
 // Array of points and redo stacks
@@ -113,6 +114,7 @@ function makeMarkerButton(
 
   btn.addEventListener("click", () => {
     curTool = label;
+    curColor = randomColor();
     selectTool(btn, thickness);
   });
 
@@ -236,6 +238,12 @@ function undoRedoListener(
   }
 }
 
+// Helper to generate random colors
+function randomColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue}, 80%, 50%)`;
+}
+
 interface MarkerLine {
   drag(x: number, y: number): void;
   display(ctx: CanvasRenderingContext2D): void;
@@ -247,6 +255,7 @@ function makeMarkerLine(
   thickness: number,
 ): MarkerLine {
   const points: { x: number; y: number }[] = [{ x: startX, y: startY }];
+  const color = curColor;
 
   return {
     drag(x: number, y: number) {
@@ -254,7 +263,7 @@ function makeMarkerLine(
     },
     display(ctx: CanvasRenderingContext2D) {
       ctx.beginPath();
-      ctx.strokeStyle = "black";
+      ctx.strokeStyle = color;
       ctx.lineWidth = thickness;
       ctx.moveTo(points[0]!.x, points[0]!.y);
       for (let i = 1; i < points.length; i++) {
@@ -278,8 +287,11 @@ function makeSticker(emoji: string, x: number, y: number): StickerCommand {
       pos = { x, y };
     },
     display(ctx) {
+      ctx.save();
       ctx.font = "32px serif";
+      ctx.globalAlpha = 1;
       ctx.fillText(emoji, pos.x - 16, pos.y + 16);
+      ctx.restore();
     },
   };
 }
@@ -295,12 +307,15 @@ function makeCursorPreview(
 ): ToolPreview {
   return {
     display(ctx) {
+      ctx.save();
       ctx.beginPath();
-      ctx.strokeStyle = "gray";
+      ctx.strokeStyle = curColor;
+      ctx.fillStyle = curColor;
       ctx.lineWidth = 1;
       ctx.arc(x, y, thickness * 1.3, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      ctx.restore();
     },
   };
 }
@@ -308,10 +323,11 @@ function makeCursorPreview(
 function makeStickerPreview(emoji: string, x: number, y: number): ToolPreview {
   return {
     display(ctx) {
+      ctx.save();
       ctx.globalAlpha = 0.5;
       ctx.font = "32px serif";
       ctx.fillText(emoji, x - 16, y + 16);
-      ctx.globalAlpha = 1.0;
+      ctx.restore();
     },
   };
 }
