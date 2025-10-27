@@ -23,7 +23,7 @@ document.body.append(buttonContainer);
 // Mouse Drawing State
 let isDrawing = false;
 let currentLine: MarkerLine | null = null;
-let curThickness = 1;
+let curThickness = 2.5;
 let curTool: string = "thin";
 let toolPreview: ToolPreview | null = null;
 
@@ -100,28 +100,28 @@ redoButton.addEventListener("click", () => {
   undoRedoListener(redoStack, drawing);
 });
 
-// Thin Button
-const thinButton = document.createElement("button");
-thinButton.textContent = "thin";
-buttonContainer.append(thinButton);
-thinButton.classList.add("markerbtn");
-thinButton.classList.add("selectedTool"); // Default selected
+// Create Thin and Thick Marker Buttons
+function makeMarkerButton(
+  label: string,
+  thickness: number,
+  isSelected = false,
+): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.textContent = label;
+  btn.classList.add("markerbtn");
+  if (isSelected) btn.classList.add("selectedTool");
 
-thinButton.addEventListener("click", () => {
-  curTool = "thin";
-  selectTool(thinButton, 1);
-});
+  btn.addEventListener("click", () => {
+    curTool = label;
+    selectTool(btn, thickness);
+  });
 
-// Thick Button
-const thickButton = document.createElement("button");
-thickButton.textContent = "thick";
-thickButton.classList.add("markerbtn");
-buttonContainer.append(thickButton);
+  buttonContainer.append(btn);
+  return btn;
+}
 
-thickButton.addEventListener("click", () => {
-  curTool = "thick";
-  selectTool(thickButton, 3);
-});
+const thinButton = makeMarkerButton("thin", 2.5, true);
+const thickButton = makeMarkerButton("thick", 5);
 
 // Emoji Buttons
 const stickers = ["😀", "⭐", "❤️"];
