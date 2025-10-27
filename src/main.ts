@@ -72,7 +72,8 @@ canvas.addEventListener("mouseleave", () => {
 // Clear Button
 const clearButton = document.createElement("button");
 clearButton.textContent = "Clear";
-document.body.append(clearButton);
+clearButton.classList.add("markerbtn");
+buttonContainer.append(clearButton);
 
 clearButton.addEventListener("click", () => {
   drawing.length = 0; // clear array
@@ -82,7 +83,8 @@ clearButton.addEventListener("click", () => {
 // Undo Button
 const undoButton = document.createElement("button");
 undoButton.textContent = "Undo";
-document.body.append(undoButton);
+undoButton.classList.add("markerbtn");
+buttonContainer.append(undoButton);
 
 undoButton.addEventListener("click", () => {
   undoRedoListener(drawing, redoStack);
@@ -91,7 +93,8 @@ undoButton.addEventListener("click", () => {
 // Redo button
 const redoButton = document.createElement("button");
 redoButton.textContent = "Redo";
-document.body.append(redoButton);
+redoButton.classList.add("markerbtn");
+buttonContainer.append(redoButton);
 
 redoButton.addEventListener("click", () => {
   undoRedoListener(redoStack, drawing);
@@ -100,7 +103,8 @@ redoButton.addEventListener("click", () => {
 // Thin Button
 const thinButton = document.createElement("button");
 thinButton.textContent = "thin";
-document.body.append(thinButton);
+buttonContainer.append(thinButton);
+thinButton.classList.add("markerbtn");
 thinButton.classList.add("selectedTool"); // Default selected
 
 thinButton.addEventListener("click", () => {
@@ -111,7 +115,8 @@ thinButton.addEventListener("click", () => {
 // Thick Button
 const thickButton = document.createElement("button");
 thickButton.textContent = "thick";
-document.body.append(thickButton);
+thickButton.classList.add("markerbtn");
+buttonContainer.append(thickButton);
 
 thickButton.addEventListener("click", () => {
   curTool = "thick";
@@ -122,17 +127,46 @@ thickButton.addEventListener("click", () => {
 const stickers = ["😀", "⭐", "❤️"];
 const stickerButtons: HTMLButtonElement[] = [];
 
-for (const emoji of stickers) {
-  const btn = document.createElement("button");
-  btn.textContent = emoji;
-  stickerButtons.push(btn);
-  document.body.append(btn);
-  btn.addEventListener("click", () => {
-    curTool = emoji;
-    selectTool(btn, curThickness);
-    canvas.dispatchEvent(new Event("tool-moved"));
+// Sticker Button Container
+const stickerContainer = document.createElement("div");
+document.body.append(stickerContainer);
+
+// Create Sticker Buttons
+function makeStickerButton() {
+  stickerContainer.innerHTML = ""; // clear previous
+  stickerButtons.length = 0;
+
+  for (const emoji of stickers) {
+    const btn = document.createElement("button");
+    btn.textContent = emoji;
+    btn.classList.add("selectedstickerbtn");
+    stickerButtons.push(btn);
+    stickerContainer.append(btn);
+
+    btn.addEventListener("click", () => {
+      curTool = emoji;
+      selectTool(btn, curThickness);
+      canvas.dispatchEvent(new Event("tool-moved"));
+    });
+  }
+
+  // Custom sticker button
+  const addButton = document.createElement("button");
+  addButton.textContent = "Add Custom Sticker";
+  addButton.classList.add("customstickerbtn");
+  stickerContainer.append(addButton);
+
+  addButton.addEventListener("click", () => {
+    const custom = prompt("Enter your custom sticker:", "");
+    if (custom && custom.trim() !== "") {
+      stickers.push(custom);
+      makeStickerButton(); // re-render
+    }
   });
 }
+
+//  Initial sticker buttons
+makeStickerButton();
 
 // Observer: Redraw on changes
 canvas.addEventListener("drawing-changed", () => {

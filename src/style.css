@@ -4,8 +4,25 @@
   border: 1px solid salmon;
 }
 
+.markerbtn {
+  font-size: 14px;
+  margin: 2px;
+}
+
 .selectedTool {
   background-color: rgb(183, 169, 169);
+}
+
+.selectedstickerbtn, .customstickerbtn {
+  font-size: 17px;
+  margin: 2px;
+  padding: 6px 10px;
+}
+
+.customstickerbtn {
+  font-weight: bold;
+  background-color: #eee;
+  border-radius: 8px;
 }
 
 #canvas {
